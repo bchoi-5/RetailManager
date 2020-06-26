@@ -1,2 +1,2 @@
 # RetailManager
-A retail management system
+A retail management system following Tim Corey's lessons.
