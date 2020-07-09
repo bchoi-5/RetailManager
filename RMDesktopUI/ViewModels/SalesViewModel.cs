@@ -16,11 +16,11 @@ namespace RMDesktopUI.ViewModels
     public class SalesViewModel : Screen
     {
         IProductEndpoint _productEndpoint;
-        IConfigHelper _configHelper;
         ISaleEndpoint _saleEndpoint;
+        IConfigHelper _configHelper;
         IMapper _mapper;
 
-        public SalesViewModel(IProductEndpoint productEndpoint, IConfigHelper configHelper, 
+        public SalesViewModel(IProductEndpoint productEndpoint, IConfigHelper configHelper,
             ISaleEndpoint saleEndpoint, IMapper mapper)
         {
             _productEndpoint = productEndpoint;
@@ -35,7 +35,7 @@ namespace RMDesktopUI.ViewModels
             await LoadProducts();
         }
 
-        public async Task LoadProducts()
+        private async Task LoadProducts()
         {
             var productList = await _productEndpoint.GetAll();
             var products = _mapper.Map<List<ProductDisplayModel>>(productList);
@@ -130,6 +130,10 @@ namespace RMDesktopUI.ViewModels
             decimal taxAmount = 0;
             decimal taxRate = _configHelper.GetTaxRate() / 100;
 
+            taxAmount = Cart
+                .Where(x => x.Product.IsTaxable)
+                .Sum(x => x.Product.RetailPrice * x.QuantityInCart * taxRate);
+
             //foreach (var item in Cart)
             //{
             //    if (item.Product.IsTaxable)
@@ -137,11 +141,6 @@ namespace RMDesktopUI.ViewModels
             //        taxAmount += (item.Product.RetailPrice * item.QuantityInCart * taxRate);
             //    }
             //}
-
-            // using LINQ
-            taxAmount = Cart
-                .Where(x => x.Product.IsTaxable)
-                .Sum(x => x.Product.RetailPrice * x.QuantityInCart * taxRate);
 
             return taxAmount;
         }
@@ -163,14 +162,14 @@ namespace RMDesktopUI.ViewModels
             }
         }
 
-        // To enable the Add To Cart Button
+
         public bool CanAddToCart
         {
             get
             {
                 bool output = false;
 
-                // Make sure someting is selected
+                // Make sure something is selected
                 // Make sure there is an item quantity
                 if (ItemQuantity > 0 && SelectedProduct?.QuantityInStock >= ItemQuantity)
                 {
@@ -181,7 +180,6 @@ namespace RMDesktopUI.ViewModels
             }
         }
 
-        // For when CanAddToCart is valid and AddToCart button is enabled. - to add to cart
         public void AddToCart()
         {
             CartItemDisplayModel existingItem = Cart.FirstOrDefault(x => x.Product == SelectedProduct);
@@ -199,6 +197,7 @@ namespace RMDesktopUI.ViewModels
                 };
                 Cart.Add(item);
             }
+
             SelectedProduct.QuantityInStock -= ItemQuantity;
             ItemQuantity = 1;
             NotifyOfPropertyChange(() => SubTotal);
@@ -213,7 +212,7 @@ namespace RMDesktopUI.ViewModels
             {
                 bool output = false;
 
-                // Make sure someting is selected
+                // Make sure something is selected
                 if (SelectedCartItem != null && SelectedCartItem?.Product.QuantityInStock > 0)
                 {
                     output = true;
@@ -223,7 +222,7 @@ namespace RMDesktopUI.ViewModels
             }
         }
 
-        public void RemoveCart()
+        public void RemoveFromCart()
         {
             SelectedCartItem.Product.QuantityInStock += 1;
 
@@ -241,7 +240,7 @@ namespace RMDesktopUI.ViewModels
             NotifyOfPropertyChange(() => Total);
             NotifyOfPropertyChange(() => CanCheckOut);
         }
-        
+
         public bool CanCheckOut
         {
             get
@@ -274,6 +273,5 @@ namespace RMDesktopUI.ViewModels
 
             await _saleEndpoint.PostSale(sale);
         }
-
     }
 }
